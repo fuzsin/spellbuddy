@@ -1,4 +1,3 @@
-HEAD
 # Spellbuddy
 
 **Spellbuddy** is a browser-based tool intended to help users learn and improve their spelling skills.  
