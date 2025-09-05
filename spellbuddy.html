@@ -4,7 +4,6 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Spell Buddy</title>
-  <!-- Inline favicon (placeholder SVG) -->
   <link rel="icon" href='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><rect width="128" height="128" rx="24" fill="%230a84ff"/><g fill="white" font-family="Arial,Helvetica,sans-serif" font-weight="700"><text x="50%" y="56%" font-size="72" text-anchor="middle">S</text><text x="50%" y="92%" font-size="36" text-anchor="middle">B</text></g></svg>' />
   <style>
     /* ===== Minimal, clean design (simple.css / PureCSS inspired) ===== */
@@ -75,6 +74,15 @@
     .input:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
     textarea { min-height: 180px; resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
 
+    .checkbox-option {
+      display: flex; align-items: center; gap: 10px;
+      margin-top: 8px;
+    }
+    .checkbox-option input[type="checkbox"] { accent-color: var(--accent); }
+    .checkbox-option label { cursor: pointer; font-weight: 500; }
+    .checkbox-option input[disabled] + label,
+    .checkbox-option input[disabled] { cursor: not-allowed; color: var(--muted); }
+
     .actions { display: flex; gap: 10px; align-items: center; justify-content: flex-end; }
 
     .btn {
@@ -133,6 +141,11 @@
           <span id="remainInfo">120 übrig</span>
         </div>
         <input id="word" class="input" type="text" maxlength="120" placeholder="Hier eingeben…" autocomplete="off" spellcheck="false" />
+        
+        <div class="checkbox-option">
+          <input type="checkbox" id="showCase" />
+          <label for="showCase" id="showCaseLabel">Groß-/Kleinschreibung anzeigen</label>
+        </div>
       </div>
 
       <div class="card">
@@ -162,25 +175,50 @@
 
     const MAP_NATO = {
       'A':'Alpha','B':'Bravo','C':'Charlie','D':'Delta','E':'Echo','F':'Foxtrot','G':'Golf','H':'Hotel','I':'India','J':'Juliett','K':'Kilo','L':'Lima','M':'Mike','N':'November','O':'Oscar','P':'Papa','Q':'Quebec','R':'Romeo','S':'Sierra','T':'Tango','U':'Uniform','V':'Victor','W':'Whiskey','X':'X‑ray','Y':'Yankee','Z':'Zulu',
-      'Ä':'Ä (AE)','Ö':'Ö (OE)','Ü':'Ü (UE)','ß':'ss'
-    };
-
-    // A small pool of German nouns per initial for the chaotic mode
-    const NOUNS = {
-      'A':['Apfel','Abenteuer','Anker','Ampel'], 'B':['Berg','Buch','Blume','Ball'], 'C':['Camping','Computer','Curry'], 'D':['Drachen','Donner','Dorf','Diamant'], 'E':['Eule','Eis','Energie','Erdbeere'], 'F':['Fahrrad','Fisch','Feder','Feuer'], 'G':['Garten','Gabel','Gitarre','Gewitter'], 'H':['Haus','Hafen','Himmel','Humor'], 'I':['Idee','Insel','Igel'], 'J':['Jahr','Jacke','Jubel'], 'K':['Kaffee','Kerze','Kamera','Kaktus'], 'L':['Lampe','Löwe','Laptop','Leiter'], 'M':['Mond','Musik','Messer','Motor'], 'N':['Nacht','Nebel','Nadel','Nuss'], 'O':['Ofen','Obst','Ozean','Orgel'], 'P':['Pferd','Paket','Pilz','Planet'], 'Q':['Qualle','Quelle','Quadrat'], 'R':['Radio','Regen','Rose','Roboter'], 'S':['Sonne','Salz','Schnee','Stein'], 'T':['Tisch','Traum','Turm','Trommel'], 'U':['Uhr','Ufer','Umhang'], 'V':['Vogel','Vulkan','Vorhang'], 'W':['Wasser','Wolke','Wiese','Würfel'], 'X':['Xylophon'], 'Y':['Yacht','Yeti'], 'Z':['Zebra','Zitrone','Zug','Zauber'],
-      'Ä':['Ähre','Ärger'], 'Ö':['Öl','Öffnung'], 'Ü':['Überfluss','Übermut']
+      'Ä':'Ä (AE)','Ö':'Ö (OE)','Ü':'Ü (UE)','ß':'Eszett'
     };
 
     const DINO = {
       'A':'Ankylosaurus','B':'Brachiosaurus','C':'Carnotaurus','D':'Diplodocus','E':'Edmontosaurus','F':'Fabrosaurus','G':'Gallimimus','H':'Hadrosaurus','I':'Iguanodon','J':'Juravenator','K':'Kentrosaurus','L':'Lambeosaurus','M':'Megalosaurus','N':'Nodosaurus','O':'Oviraptor','P':'Parasaurolophus','Q':'Quilmesaurus','R':'(Velo)Raptor','S':'Stegosaurus','T':'Triceratops','U':'Utahraptor','V':'Velociraptor','W':'Wuerhosaurus','X':'Xenoceratops','Y':'Yangchuanosaurus','Z':'Zuul',
-      'Ä':'Ä (AE)','Ö':'Ö (OE)','Ü':'Ü (UE)','ß':'ss'
+      'Ä':'Ä (AE)','Ö':'Ö (OE)','Ü':'Ü (UE)','ß':'Eszett'
     };
 
     const DIGITS = ['0','1','2','3','4','5','6','7','8','9'];
     const DIGIT_NAMES = ['Null','Eins','Zwei','Drei','Vier','Fünf','Sechs','Sieben','Acht','Neun'];
+    const DIGIT_NAMES_NATO = ['Zero','One','Two','Three','Four','Five','Six','Seven','Eight','Nine'];
 
     const PUNCT = {
-      ' ': '(Leerzeichen)', '-': 'Bindestrich', '_': 'Unterstrich', '.': 'Punkt', ',': 'Komma', ';': 'Semikolon', ':': 'Doppelpunkt', '!': 'Ausrufezeichen', '?': 'Fragezeichen', '(': 'Klammer auf', ')': 'Klammer zu', '"': 'Anführungszeichen', '\'': 'Apostroph', '/': 'Schrägstrich', '\\': 'Backslash', '@': 'At‑Zeichen', '#': 'Raute', '+': 'Plus', '*': 'Stern', '=': 'Gleich', '%': 'Prozent', '&': 'Und‑Zeichen', '§': 'Paragraph', '€': 'Euro', '\n': ''
+      ' ': '(Leerzeichen)', '-': 'Bindestrich', '_': 'Unterstrich', '.': 'Punkt', ',': 'Komma', ';': 'Semikolon', ':': 'Doppelpunkt', '!': 'Ausrufezeichen', '?': 'Fragezeichen', '(': 'Klammer auf', ')': 'Klammer zu', '"': 'Anführungszeichen', '\'': 'Apostroph', '/': 'Schrägstrich', '\\': 'Backslash',
+      '$':'Dollar','<':'Kleiner als','>':'Größer als','{':'geschweifte Klammer auf','}':'geschweifte Klammer zu','[':'eckige Klammer auf',']':'eckige Klammer zu','@':'At‑Zeichen','#':'Raute','+':'Plus','*':'Stern','=':'Gleich','%':'Prozent','&':'Und‑Zeichen','§':'Paragraph','€':'Euro','\n':''
+    };
+
+    const NOUNS = {
+      'A': ['Apfel','Affe','Anker', 'Adler','Ampel','Ahorn','Alge','Amöbe','Antenne','Anzug','Arm','Axt','Auge','Ader','Akazie','Altar','Ananas','Acker','Albatros','Alpaka','Amsel','Ananas','Angel','Anblick','Anhöhe'],
+      'B': ['Berg','Buch','Blume', 'Bär','Ball','Banane','Baum','Bein','Birne','Blatt','Boot','Brille','Brot','Brunnen','Brücke','Bürste','Bus','Butter','Baustelle','Becher','Beere','Besen','Biene','Bison'],
+      'C': ['Camping','Computer','Curry', 'Cello','Champion','Chemie','Chiffon','Chili','Chip','Chor','Couch','Clown','Cocktail','College','Comic','Compact','Content','Cookie','Corner','Cousin','Cover','Crash','Crew','Cruise'],
+      'D': ['Drachen','Donner','Dorf', 'Damm','Deck','Diamant','Diktat','Dinosaurier','Disko','Doktor','Dose','Drache','Dschungel','Dusche','Dübel','Düne','Duo','Dunst','Dame','Dattel','Debit','Delphin','Depot','Design','Detektor'],
+      'E': ['Eule','Eis','Energie', 'Erdbeere','Erdnuss','Ecke','Eimer','Einkauf','Einhorn','Eisen','Elch','Elefant','Emblem','Ente','Erde','Ernte','Erfolg','Ersatz','Expertise','Exponat','Explosion','Element','Elfe','Eifer','Empathie'],
+      'F': ['Fahrrad','Fisch','Feder', 'Fahne','Falke','Fass','Fels','Fenster','Film','Flasche','Fliege','Flügel','Fluss','Form','Foto','Frosch','Fuchs','Funke','Futter','Fabrik','Fabel','Fächer','Fantasie','Farbe','Faust'],
+      'G': ['Garten','Gabel','Gitarre', 'Gans','Garage','Gebäude','Gehirn','Gedanke','Gefahr','Geheimnis','Gelände','Gemüse','Geschenk','Gesicht','Glas','Glocke','Gras','Grill','Grund','Gruppe','Gummi','Gürtel','Gast','Gebet','Gelb','Geist'],
+      'H': ['Haus','Hafen','Himmel', 'Hammer','Hand','Hase','Helm','Hemd','Henkel','Herz','Hexe','Holz','Honig','Hund','Hupe','Hyäne','Haar','Hals','Handschuh','Heimat','Hose','Hotel','Hügel','Humor','Hütte'],
+      'I': ['Idee','Insel','Igel', 'Imbiss','Impuls','Index','Info','Ingwer','Initial','Insekt','Install','Instanz','Instrument','Interesse','Internet','Intuition','Inventar','Investition','Investor','Ion','Ironie','Irrtum','Isobar','Isolator','Item'],
+      'J': ['Jahr','Jacke','Jubel', 'Jagd','Jacht','Junge','Justiz','Juwel','Joker','Journal','Jubiläum','Judo','Joghurt','Jahrmarkt','Jahreszeit','Jahresende','Jakobshafen','Jalousie','Jambus','Jargon','Juwelier','Joystick','Jäger','Jakobsweg'],
+      'K': ['Kaffee','Kerze','Kamera', 'Kaktus','Kaninchen','Karton','Katze','Käse','Keller','Kirche','Kissen','Klaue','Knie','Knoten','Kohle','König','Kopf','Korb','Kranich','Krawatte','Kreide','Krokodil','Kuchen','Kugel'],
+      'L': ['Lampe','Löwe','Laptop', 'Lama','Land','Laterne','Laub','Leben','Lehrer','Leitung','Licht','Liebe','Linie','Lippe','Liste','Loch','Löffel','Lunge','Luxus','Labyrinth','Ladung','Lager','Laser','Laune','Lebkuchen'],
+      'M': ['Mond','Musik','Messer', 'Maus','Meer','Melone','Mensch','Messe','Meteo','Mikro','Milch','Minute','Mittel','Modul','Moment','Motor','Mücke','Muffin','Museum','Muster','Mythos','Magen','Magnet','Manege','Mantel'],
+      'N': ['Nacht','Nebel','Nadel', 'Nagel','Name','Natur','Nerv','Netz','Niere','Niveau','Nudel','Nuss','Nylon','Nachbar','Nachrichten','Navigation','Neid','Neigung','Neugier','Neutral','Nische','Nobel','Nukleus','Nummer','Nussbaum'],
+      'O': ['Ofen','Obst','Ozean', 'Oase','Oboe','Oktave','Oper','Opossum','Orange','Orchester','Ordner','Orient','Ort','Ozelot','Optimismus','Option','Ordnung','Organisation','Ohr','Ochse','Oberschenkel','Obstgarten','Offizier','Ofentür','Omen'],
+      'P': ['Pferd','Paket','Pilz', 'Palme','Papier','Parade','Parfüm','Park','Pate','Pause','Pfahl','Pflanze','Pflug','Pinsel','Pizza','Plane','Plastik','Poesie','Polizei','Pony','Portal','Post','Preis','Prüfung'],
+      'Q': ['Qualle','Quelle','Quadrat', 'Quant','Quartier','Quasar','Quaste','Quitte','Quorum','Quote','Quellcode','Querschnitt','Quiz','Quartett','Quarz','Quersumme','Quintett','Quäker','Quantität','Quartal','Quellwasser','Quirl','Quasselstrippe','Quintessenz'],
+      'R': ['Radio','Regen','Rose', 'Rakete','Ratte','Rechts','Reifen','Reise','Relief','Respekt','Restaurant','Rhein','Riege','Riff','Ritter','Rock','Rost','Rücken','Rucksack','Ruhe','Runde','Rätsel','Rache','Regenbogen','Regal'],
+      'S': ['Sonne','Salz','Schnee', 'Säge','Sand','Schatten','Schiff','Schuh','Schule','Schwanz','Schwert','Seil','Seite','Signal','Silber','Skulptur','Socke','Spiegel','Stahl','Stern','Stock','Stuhl','Sturm','Stunde','System'],
+      'T': ['Tisch','Traum','Turm', 'Tag','Taste','Tee','Telefon','Teller','Temperatur','Teppich','Termin','Tiger','Tinte','Toilette','Tomate','Ton','Topf','Treppe','Trommel','Tuch','Tutor','Talent','Tank','Technik','Tempo'],
+      'U': ['Uhr','Ufer','Umhang', 'Uferweg','Umlauf','Umleitung','Umschlag','Unfall','Ungeziefer','Union','Universum','Untergrund','Uran','Urlaub','Urteil','Utopie','Uhu','Uferlosigkeit','Umgebung','Umriss','Umwelt','Unabhängigkeit','Unterricht','Unternehmen','Unterwasser'],
+      'V': ['Vogel','Vulkan','Vorhang', 'Vase','Vektor','Ventil','Verband','Verbündeter','Verkehr','Verlust','Versteck','Vertrag','Viktoria','Virus','Visum','Vision','Vitamin','Volk','Volt','Vorname','Vorteil','Vulkanier','Vergangenheit','Vergnügen','Verrat'],
+      'W': ['Wasser','Wolke','Wiese', 'Waffe','Wald','Wand','Wartung','Weg','Wetter','Wiesel','Wind','Winkel','Winter','Wissenschaft','Woche','Wunder','Wunsch','Wurst','Würfel','Wachstum','Wähler','Wahrheit','Wal','Wandler','Wartezimmer'],
+      'X': ['Xylophon'],
+      'Y': ['Yacht','Yeti'],
+      'Z': ['Zebra','Zitrone','Zug', 'Zange','Zahn','Zecke','Zeichen','Zeile','Zelt','Zentrum','Ziel','Ziegel','Zimmer','Zinn','Zoll','Zone','Zucker','Zunge','Zweck','Zweig','Zwilling','Zyklus','Zahl','Zange','Zeltlager','Zement']
     };
 
     // ===== Utility =====
@@ -188,41 +226,62 @@
 
     function pickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
+    function isUpperCase(ch) { return ch === ch.toUpperCase() && ch !== ch.toLowerCase(); }
+    function isLowerCase(ch) { return ch === ch.toLowerCase() && ch !== ch.toUpperCase(); }
+
     function mapChar(ch, mode) {
-      // Normalize common German cases
       const upper = ch.toUpperCase();
 
-      if (DIGITS.includes(ch)) return DIGIT_NAMES[Number(ch)];
+      if (DIGITS.includes(ch)) return (mode==='nato') ? DIGIT_NAMES_NATO[Number(ch)] : DIGIT_NAMES[Number(ch)];
       if (PUNCT[ch] !== undefined) return PUNCT[ch];
 
-      // Letters & specials
       const isLetter = /[A-ZÄÖÜß]/i.test(ch);
-      if (!isLetter) return ch; // unknown symbol: pass through
+      if (!isLetter) return ch;
 
+      let wordMapping;
       switch (mode) {
-        case 'classic': return MAP_CLASSIC[upper] || ch;
-        case 'nato':    return MAP_NATO[upper]    || MAP_NATO[upper.normalize('NFKD')] || ch;
-        case 'cities':  return MAP_CITIES[upper]  || ch;
-        case 'dino':    return DINO[upper]        || ch;
+        case 'classic': wordMapping = MAP_CLASSIC[upper]; break;
+        case 'nato':    wordMapping = MAP_NATO[upper]; break;
+        case 'cities':  wordMapping = MAP_CITIES[upper]; break;
+        case 'dino':    wordMapping = DINO[upper]; break;
         case 'chaos':
           const pool = NOUNS[upper];
-          return pool ? pickRandom(pool) : ch;
-        default: return ch;
+          wordMapping = pool ? pickRandom(pool) : null;
+          break;
+        default: wordMapping = null;
       }
+
+      if (!wordMapping) return ch;
+      return wordMapping;
     }
 
-    function spell(word, mode) {
+    function spell(word, mode, showCase = false) {
       const parts = [];
+      const showCaseEnabled = showCase && mode !== 'nato';
+      
       for (const ch of word) {
-        parts.push(mapChar(ch, mode));
+        let mappedWord = mapChar(ch, mode);
+        
+        if (showCaseEnabled && /[A-ZÄÖÜß]/i.test(ch)) {
+            if (isUpperCase(ch)) {
+                mappedWord = `großes ${ch} wie ${mappedWord}`;
+            } else if (isLowerCase(ch)) {
+                mappedWord = `kleines ${ch} wie ${mappedWord}`;
+            }
+        }
+        parts.push(mappedWord);
       }
-      return parts.join(' ');
+      
+      const separator = showCaseEnabled ? ', ' : ' ';
+      return parts.join(separator);
     }
 
     // ===== Wiring =====
     const input = $('#word');
     const output = $('#output');
     const remain = $('#remainInfo');
+    const showCaseCheckbox = $('#showCase');
+    const showCaseLabel = $('#showCaseLabel');
     const modes = document.getElementsByName('mode');
 
     function currentMode() {
@@ -233,12 +292,25 @@
     function update() {
       const value = input.value;
       const mode = currentMode();
-      output.value = spell(value, mode);
+      const isNato = mode === 'nato';
+      
+      // Toggle checkbox and label state
+      showCaseCheckbox.disabled = isNato;
+      if (isNato) {
+          showCaseCheckbox.checked = false;
+          showCaseLabel.textContent = 'Groß-/Kleinschreibung (nicht anwendbar)';
+      } else {
+          showCaseLabel.textContent = 'Groß-/Kleinschreibung anzeigen';
+      }
+      
+      const showCase = showCaseCheckbox.checked;
+      output.value = spell(value, mode, showCase);
       const left = input.maxLength - value.length;
       remain.textContent = `${left} übrig`;
     }
 
     input.addEventListener('input', update);
+    showCaseCheckbox.addEventListener('change', update);
     for (const m of modes) m.addEventListener('change', update);
 
     $('#btnCopy').addEventListener('click', async () => {
@@ -247,18 +319,11 @@
         const btn = $('#btnCopy');
         const prev = btn.textContent; btn.textContent = 'Kopiert!';
         setTimeout(() => btn.textContent = prev, 1400);
-      } catch (e) {
-        alert('Kopieren nicht möglich: ' + e.message);
-      }
+      } catch (e) { alert('Kopieren fehlgeschlagen'); }
     });
 
-    $('#btnClear').addEventListener('click', () => {
-      input.value = '';
-      update();
-      input.focus();
-    });
+    $('#btnClear').addEventListener('click', () => { input.value=''; update(); input.focus(); });
 
-    // Init
     update();
   </script>
 </body>
