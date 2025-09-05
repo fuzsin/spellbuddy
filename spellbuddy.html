@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Spell Buddy</title>
+  <!-- Inline favicon (placeholder SVG) -->
+  <link rel="icon" href='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><rect width="128" height="128" rx="24" fill="%230a84ff"/><g fill="white" font-family="Arial,Helvetica,sans-serif" font-weight="700"><text x="50%" y="56%" font-size="72" text-anchor="middle">S</text><text x="50%" y="92%" font-size="36" text-anchor="middle">B</text></g></svg>' />
+  <style>
+    /* ===== Minimal, clean design (simple.css / PureCSS inspired) ===== */
+    :root {
+      --bg: #ffffff;
+      --text: #111827; /* slate-900 */
+      --muted: #6b7280; /* gray-500 */
+      --accent: #0a84ff;
+      --card: #f8fafc; /* slate-50 */
+      --border: #e5e7eb; /* gray-200 */
+      --radius: 14px;
+      --shadow: 0 1px 2px rgba(0,0,0,.06), 0 8px 24px rgba(0,0,0,.06);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0b0e14;
+        --text: #e5e7eb;
+        --muted: #9ca3af;
+        --accent: #4ea8ff;
+        --card: #121725;
+        --border: #1f2937;
+      }
+    }
+
+    html, body { height: 100%; }
+    body {
+      margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    }
+    .container { max-width: 900px; padding: 24px; margin: 0 auto; }
+
+    header h1 { font-size: clamp(28px, 4vw, 44px); margin: 8px 0 16px; letter-spacing: .3px; }
+    header p  { color: var(--muted); margin-top: -4px; }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+
+    fieldset { border: none; padding: 0; margin: 0; }
+    .radio-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 8px;
+    }
+    .option {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; background: #0000; transition: border-color .2s, background .2s;
+    }
+    .option:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 6%, transparent); }
+    .option input { accent-color: var(--accent); }
+    .option label { font-weight: 600; cursor: pointer; }
+    .hint { font-size: 12px; color: var(--muted); }
+
+    .stack { display: grid; gap: 12px; }
+
+    .input-row { display: grid; gap: 8px; }
+    .counter {
+      font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; align-items: center;
+    }
+    .input, textarea {
+      width: 100%; box-sizing: border-box; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border); background: #fff0; color: inherit;
+      outline: none; transition: border-color .2s, box-shadow .2s;
+    }
+    .input:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
+    textarea { min-height: 180px; resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+
+    .actions { display: flex; gap: 10px; align-items: center; justify-content: flex-end; }
+
+    .btn {
+      appearance: none; border: 1px solid var(--border); background: var(--bg); color: var(--text);
+      padding: 10px 14px; border-radius: 12px; cursor: pointer; font-weight: 600; box-shadow: var(--shadow);
+      transition: transform .02s ease, background .2s, border-color .2s;
+    }
+    .btn.primary { background: var(--accent); color: white; border-color: color-mix(in srgb, var(--accent) 70%, black); }
+    .btn:hover { transform: translateY(-1px); }
+
+    .footer { margin-top: 28px; font-size: 12px; color: var(--muted); text-align: center; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Spell Buddy</h1>
+      <p class="hint">Buchstabieren – schnell, sauber, offline. Wähle eine Methode, tippe dein Wort, kopiere das Ergebnis.</p>
+    </header>
+
+    <section class="card" aria-labelledby="mode-head">
+      <h2 id="mode-head" class="sr-only">Methode wählen</h2>
+      <fieldset>
+        <legend class="hint">Methode wählen</legend>
+        <div class="radio-grid" id="mode-group">
+          <div class="option">
+            <input type="radio" name="mode" id="mode-cities" value="cities" checked>
+            <label for="mode-cities" title="Deutsche Buchstabiertafel für Wirtschaft und Verwaltung (DIN 5009:2022-06)">Städte</label>
+          </div>
+          <div class="option">
+            <input type="radio" name="mode" id="mode-classic" value="classic">
+            <label for="mode-classic" title="Postalische Buchstabiertafel von 1950">Classic</label>
+          </div>
+          <div class="option">
+            <input type="radio" name="mode" id="mode-nato" value="nato">
+            <label for="mode-nato" title="Internationale Buchstabiertafel der ICAO">NATO‑Alphabet</label>
+          </div>
+          <div class="option">
+            <input type="radio" name="mode" id="mode-chaos" value="chaos">
+            <label for="mode-chaos" title="Zufällige Substantive aus der deutschen Sprache">Chaotisch</label>
+          </div>
+          <div class="option">
+            <input type="radio" name="mode" id="mode-dino" value="dino">
+            <label for="mode-dino" title="Dinosaurier‑Namen je Buchstabe">Dinos‑Namen ☺</label>
+          </div>
+        </div>
+      </fieldset>
+    </section>
+
+    <section class="stack" style="margin-top:16px">
+      <div class="card input-row">
+        <label for="word" style="font-weight:600">Zu buchstabierendes Wort</label>
+        <div class="counter">
+          <span id="maxInfo">Max. 120 Zeichen</span>
+          <span id="remainInfo">120 übrig</span>
+        </div>
+        <input id="word" class="input" type="text" maxlength="120" placeholder="Hier eingeben…" autocomplete="off" spellcheck="false" />
+      </div>
+
+      <div class="card">
+        <label for="output" style="font-weight:600; display:block; margin-bottom:8px">Ergebnis</label>
+        <textarea id="output" readonly></textarea>
+        <div class="actions" style="margin-top:10px">
+          <button id="btnClear" class="btn" type="button" aria-label="Eingabe löschen">Leeren</button>
+          <button id="btnCopy" class="btn primary" type="button" aria-label="Ergebnis in die Zwischenablage kopieren">Kopieren</button>
+        </div>
+      </div>
+    </section>
+
+    <p class="footer">Tipp: Umlaute (Ä/Ö/Ü) und ß werden automatisch sinnvoll behandelt. Ziffern und Satzzeichen werden benannt.</p>
+  </div>
+
+  <script>
+    // ===== Alphabete / Wortlisten =====
+    const MAP_CLASSIC = {
+      'A':'Anton','B':'Berta','C':'Cäsar','D':'Dora','E':'Emil','F':'Friedrich','G':'Gustav','H':'Heinrich','I':'Ida','J':'Julius','K':'Kaufmann','L':'Ludwig','M':'Martha','N':'Nordpol','O':'Otto','P':'Paula','Q':'Quelle','R':'Richard','S':'Samuel','T':'Theodor','U':'Ulrich','V':'Viktor','W':'Wilhelm','X':'Xantippe','Y':'Ypsilon','Z':'Zacharias',
+      'Ä':'Ärger','Ö':'Ökonom','Ü':'Übermut','ß':'Eszett'
+    };
+
+    const MAP_CITIES = {
+      'A':'Aachen','B':'Berlin','C':'Chemnitz','D':'Düsseldorf','E':'Essen','F':'Frankfurt','G':'Görlitz','H':'Hamburg','I':'Ingolstadt','J':'Jena','K':'Köln','L':'Leipzig','M':'München','N':'Nürnberg','O':'Offenbach','P':'Potsdam','Q':'Quedlinburg','R':'Rostock','S':'Stuttgart','T':'Tübingen','U':'Ulm','V':'Villingen','W':'Wiesbaden','X':'Xanten','Y':'Ypsilon','Z':'Zwickau',
+      'Ä':'Äpfingen','Ö':'Öhringen','Ü':'Übach‑Palenberg','ß':'Eszett'
+    };
+
+    const MAP_NATO = {
+      'A':'Alpha','B':'Bravo','C':'Charlie','D':'Delta','E':'Echo','F':'Foxtrot','G':'Golf','H':'Hotel','I':'India','J':'Juliett','K':'Kilo','L':'Lima','M':'Mike','N':'November','O':'Oscar','P':'Papa','Q':'Quebec','R':'Romeo','S':'Sierra','T':'Tango','U':'Uniform','V':'Victor','W':'Whiskey','X':'X‑ray','Y':'Yankee','Z':'Zulu',
+      'Ä':'Ä (AE)','Ö':'Ö (OE)','Ü':'Ü (UE)','ß':'ss'
+    };
+
+    // A small pool of German nouns per initial for the chaotic mode
+    const NOUNS = {
+      'A':['Apfel','Abenteuer','Anker','Ampel'], 'B':['Berg','Buch','Blume','Ball'], 'C':['Camping','Computer','Curry'], 'D':['Drachen','Donner','Dorf','Diamant'], 'E':['Eule','Eis','Energie','Erdbeere'], 'F':['Fahrrad','Fisch','Feder','Feuer'], 'G':['Garten','Gabel','Gitarre','Gewitter'], 'H':['Haus','Hafen','Himmel','Humor'], 'I':['Idee','Insel','Igel'], 'J':['Jahr','Jacke','Jubel'], 'K':['Kaffee','Kerze','Kamera','Kaktus'], 'L':['Lampe','Löwe','Laptop','Leiter'], 'M':['Mond','Musik','Messer','Motor'], 'N':['Nacht','Nebel','Nadel','Nuss'], 'O':['Ofen','Obst','Ozean','Orgel'], 'P':['Pferd','Paket','Pilz','Planet'], 'Q':['Qualle','Quelle','Quadrat'], 'R':['Radio','Regen','Rose','Roboter'], 'S':['Sonne','Salz','Schnee','Stein'], 'T':['Tisch','Traum','Turm','Trommel'], 'U':['Uhr','Ufer','Umhang'], 'V':['Vogel','Vulkan','Vorhang'], 'W':['Wasser','Wolke','Wiese','Würfel'], 'X':['Xylophon'], 'Y':['Yacht','Yeti'], 'Z':['Zebra','Zitrone','Zug','Zauber'],
+      'Ä':['Ähre','Ärger'], 'Ö':['Öl','Öffnung'], 'Ü':['Überfluss','Übermut']
+    };
+
+    const DINO = {
+      'A':'Ankylosaurus','B':'Brachiosaurus','C':'Carnotaurus','D':'Diplodocus','E':'Edmontosaurus','F':'Fabrosaurus','G':'Gallimimus','H':'Hadrosaurus','I':'Iguanodon','J':'Juravenator','K':'Kentrosaurus','L':'Lambeosaurus','M':'Megalosaurus','N':'Nodosaurus','O':'Oviraptor','P':'Parasaurolophus','Q':'Quilmesaurus','R':'(Velo)Raptor','S':'Stegosaurus','T':'Triceratops','U':'Utahraptor','V':'Velociraptor','W':'Wuerhosaurus','X':'Xenoceratops','Y':'Yangchuanosaurus','Z':'Zuul',
+      'Ä':'Ä (AE)','Ö':'Ö (OE)','Ü':'Ü (UE)','ß':'ss'
+    };
+
+    const DIGITS = ['0','1','2','3','4','5','6','7','8','9'];
+    const DIGIT_NAMES = ['Null','Eins','Zwei','Drei','Vier','Fünf','Sechs','Sieben','Acht','Neun'];
+
+    const PUNCT = {
+      ' ': '(Leerzeichen)', '-': 'Bindestrich', '_': 'Unterstrich', '.': 'Punkt', ',': 'Komma', ';': 'Semikolon', ':': 'Doppelpunkt', '!': 'Ausrufezeichen', '?': 'Fragezeichen', '(': 'Klammer auf', ')': 'Klammer zu', '"': 'Anführungszeichen', '\'': 'Apostroph', '/': 'Schrägstrich', '\\': 'Backslash', '@': 'At‑Zeichen', '#': 'Raute', '+': 'Plus', '*': 'Stern', '=': 'Gleich', '%': 'Prozent', '&': 'Und‑Zeichen', '§': 'Paragraph', '€': 'Euro', '\n': ''
+    };
+
+    // ===== Utility =====
+    const $ = sel => document.querySelector(sel);
+
+    function pickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+    function mapChar(ch, mode) {
+      // Normalize common German cases
+      const upper = ch.toUpperCase();
+
+      if (DIGITS.includes(ch)) return DIGIT_NAMES[Number(ch)];
+      if (PUNCT[ch] !== undefined) return PUNCT[ch];
+
+      // Letters & specials
+      const isLetter = /[A-ZÄÖÜß]/i.test(ch);
+      if (!isLetter) return ch; // unknown symbol: pass through
+
+      switch (mode) {
+        case 'classic': return MAP_CLASSIC[upper] || ch;
+        case 'nato':    return MAP_NATO[upper]    || MAP_NATO[upper.normalize('NFKD')] || ch;
+        case 'cities':  return MAP_CITIES[upper]  || ch;
+        case 'dino':    return DINO[upper]        || ch;
+        case 'chaos':
+          const pool = NOUNS[upper];
+          return pool ? pickRandom(pool) : ch;
+        default: return ch;
+      }
+    }
+
+    function spell(word, mode) {
+      const parts = [];
+      for (const ch of word) {
+        parts.push(mapChar(ch, mode));
+      }
+      return parts.join(' ');
+    }
+
+    // ===== Wiring =====
+    const input = $('#word');
+    const output = $('#output');
+    const remain = $('#remainInfo');
+    const modes = document.getElementsByName('mode');
+
+    function currentMode() {
+      for (const m of modes) if (m.checked) return m.value;
+      return 'cities';
+    }
+
+    function update() {
+      const value = input.value;
+      const mode = currentMode();
+      output.value = spell(value, mode);
+      const left = input.maxLength - value.length;
+      remain.textContent = `${left} übrig`;
+    }
+
+    input.addEventListener('input', update);
+    for (const m of modes) m.addEventListener('change', update);
+
+    $('#btnCopy').addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(output.value);
+        const btn = $('#btnCopy');
+        const prev = btn.textContent; btn.textContent = 'Kopiert!';
+        setTimeout(() => btn.textContent = prev, 1400);
+      } catch (e) {
+        alert('Kopieren nicht möglich: ' + e.message);
+      }
+    });
+
+    $('#btnClear').addEventListener('click', () => {
+      input.value = '';
+      update();
+      input.focus();
+    });
+
+    // Init
+    update();
+  </script>
+</body>
+</html>
