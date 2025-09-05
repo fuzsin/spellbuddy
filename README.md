@@ -1,3 +1,4 @@
+HEAD
 # Spellbuddy
 
 **Spellbuddy** is a browser-based tool intended to help users learn and improve their spelling skills.  
@@ -33,3 +34,4 @@ This project is licensed under the [MIT License](LICENSE).
 ## 🌐 Live Demo
 
 Coming soon via GitHub Pages.
+
